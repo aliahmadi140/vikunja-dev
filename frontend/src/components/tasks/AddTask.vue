@@ -79,6 +79,8 @@ import {useAutoHeightTextarea} from '@/composables/useAutoHeightTextarea'
 import TaskService from '@/services/task'
 import TaskModel from '@/models/task'
 
+import TaskCollectionService from '@/services/taskCollection'
+
 const props = withDefaults(defineProps<{
 	defaultPosition?: number,
 }>(), {
@@ -141,7 +143,6 @@ async function addTask() {
 	const allLabels = tasksToCreate.map(({title}) => getLabelsFromPrefix(title, authStore.settings.frontendSettings.quickAddMagicMode) ?? [])
 	await taskStore.ensureLabelsExist(allLabels.flat())
 
-	const taskCollectionService = new TaskService()
 	const projectIndices = new Map<number, number>()
 
 	let currentProjectId = authStore.settings.defaultProjectId
@@ -157,12 +158,13 @@ async function addTask() {
 				: currentProjectId
 
 			if (!projectIndices.has(projectId)) {
-				const newestTask = await taskCollectionService.getAll(new TaskModel({}), {
-					sort_by: ['id'],
-					order_by: ['desc'],
-					per_page: 1,
-					filter: `project_id = ${projectId}`,
-				})
+				const taskCollectionService = new TaskCollectionService()
+
+				const newestTask = await taskCollectionService.getAll({projectId}, {
+    sort_by: ['id'],
+    order_by: ['desc'],
+    per_page: 1,
+})
 				projectIndices.set(projectId, newestTask[0]?.index || 0)
 			}
 		}

@@ -75,25 +75,18 @@ setLanguage(browserLanguage).then(() => {
 	}
 
 	if (import.meta.env.DEV) {
-		app.config.warnHandler = (msg) => {
-			error(msg)
-			throw msg
-		}
+    app.config.warnHandler = (msg) => {
+        console.warn(msg)
+    }
 
-		// https://stackoverflow.com/a/52076738/15522256
-		window.addEventListener('error', (err) => {
-			error(err)
-			throw err
-		})
+    window.addEventListener('error', (err) => {
+        console.error(err)
+    })
 
-
-		window.addEventListener('unhandledrejection', (err) => {
-			// event.promise contains the promise object
-			// event.reason contains the reason for the rejection
-			error(err)
-			throw err
-		})
-	}
+    window.addEventListener('unhandledrejection', (err) => {
+        console.error(err)
+    })
+}
 
 	app.config.globalProperties.$message = {
 		error,

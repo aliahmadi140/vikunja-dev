@@ -1,9 +1,8 @@
 import AbstractModel from './abstractModel'
 import UserModel from './user'
-import TaskModel from '../services/task'
+import TaskModel from '@/models/task'
 
 import type {IBucket} from '@/modelTypes/IBucket'
-import type {ITask} from '@/modelTypes/ITask'
 import type {IUser} from '@/modelTypes/IUser'
 
 export default class BucketModel extends AbstractModel<IBucket> implements IBucket {
@@ -11,10 +10,10 @@ export default class BucketModel extends AbstractModel<IBucket> implements IBuck
 	title = ''
 	projectId = ''
 	limit = 0
-	tasks: ITask[] = []
+	tasks = []
 	position = 0
 	count = 0
-	
+
 	createdBy: IUser = null
 	created: Date = null
 	updated: Date = null
@@ -23,10 +22,10 @@ export default class BucketModel extends AbstractModel<IBucket> implements IBuck
 		super()
 		this.assignData(data)
 
-		this.tasks = this.tasks.map(t => new TaskModel(t))
+		this.tasks = (data.tasks || []).map(t => new TaskModel(t))
 
-		this.createdBy = new UserModel(this.createdBy)
-		this.created = new Date(this.created)
-		this.updated = new Date(this.updated)
+		this.createdBy = this.createdBy ? new UserModel(this.createdBy) : null
+		this.created = this.created ? new Date(this.created) : null
+		this.updated = this.updated ? new Date(this.updated) : null
 	}
 }

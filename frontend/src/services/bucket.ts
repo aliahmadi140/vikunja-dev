@@ -1,6 +1,6 @@
 import AbstractService from './abstractService'
 import BucketModel from '../models/bucket'
-import TaskService from '@/services/task'
+import TaskModel from '@/models/task'
 import type { IBucket } from '@/modelTypes/IBucket'
 
 export default class BucketService extends AbstractService<IBucket> {
@@ -18,8 +18,7 @@ export default class BucketService extends AbstractService<IBucket> {
 	}
 
 	beforeUpdate(model) {
-		const taskService = new TaskService()
-		model.tasks = model.tasks?.map(t => taskService.processModel(t))
+		model.tasks = model.tasks?.map(t => new TaskModel(t))
 		return model
 	}
 }

@@ -117,11 +117,11 @@ this.priority = Number.isFinite(this.priority)
 
 	
 
-		this.labels = this.labels
-			.map(l => new LabelModel(l))
-			.sort((a, b) => a.title.localeCompare(b.title))
+		this.labels = (this.labels || [])
+    .map(l => new LabelModel(l))
+    .sort((a, b) => a.title.localeCompare(b.title))
 
-		this.assignees = this.assignees.map(a => new UserModel(a))
+		this.assignees = (this.assignees || []).map(a => new UserModel(a))
 
 		this.dueDate = parseDateOrNull(this.dueDate)
 		this.startDate = parseDateOrNull(this.startDate)
@@ -131,9 +131,9 @@ this.priority = Number.isFinite(this.priority)
 			? this.estimation
 			: null
 
-		this.repeatAfter = parseRepeatAfter(this.repeatAfter as number)
+		this.repeatAfter = parseRepeatAfter((this.repeatAfter as number) || 0)
 
-		this.reminders = this.reminders.map(r => new TaskReminderModel(r))
+		this.reminders = (this.reminders || []).map(r => new TaskReminderModel(r))
 
 		if (this.hexColor !== '' && this.hexColor.substring(0, 1) !== '#') {
 			this.hexColor = '#' + this.hexColor
@@ -145,7 +145,7 @@ this.priority = Number.isFinite(this.priority)
 			)
 		})
 
-		this.attachments = this.attachments.map(a => new AttachmentModel(a))
+		this.attachments = (this.attachments || []).map(a => new AttachmentModel(a))
 
 		if (this.identifier === `-${this.index}`) {
 			this.identifier = ''

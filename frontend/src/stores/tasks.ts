@@ -11,7 +11,7 @@ import {cleanupItemText, parseTaskText, PREFIXES} from '@/modules/parseTaskText'
 import TaskAssigneeModel from '@/models/taskAssignee'
 import LabelTaskModel from '@/models/labelTask'
 import LabelTask from '@/models/labelTask'
-import TaskModel from '@/services/task'
+import TaskModel from '@/models/task'
 import LabelModel from '@/models/label'
 
 import type {ILabel} from '@/modelTypes/ILabel'
@@ -432,21 +432,26 @@ async function loadTasks(
 		const quickAddMagicMode = authStore.settings.frontendSettings.quickAddMagicMode
 		const parsedTask = parseTaskText(title, quickAddMagicMode)
 
-		if(parsedTask.text === '') {
-			const taskService = new TaskService()
-			try {
-				return taskService.create(new TaskModel({
-					title,
-					projectId,
-					bucketId,
-					position,
-					index,
-				}))
-			} finally {
-				cancel()
-			}
-		}
-	
+	if(parsedTask.text === '') {
+    const validProjectId = projectId || authStore.settings.defaultProjectId
+    if (!validProjectId || validProjectId <= 0) {
+        cancel()
+        throw new Error('NO_PROJECT')
+    }
+    
+    const taskService = new TaskService()
+    try {
+        return taskService.create(new TaskModel({
+            title,
+            projectId: validProjectId,
+            bucketId,
+            position,
+            index,
+        }))
+    } finally {
+        cancel()
+    }
+}
 		const foundProjectId = await findProjectId({
 			project: parsedTask.project,
 			projectId: projectId || 0,

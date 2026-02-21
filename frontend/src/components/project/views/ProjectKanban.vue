@@ -1,10 +1,10 @@
 <template>
 	<ProjectWrapper
-		class="project-kanban"
-		:is-loading-project="isLoadingProject"
-		:project-id="projectId"
-		:view-id
-	>
+  class="project-kanban"
+  :is-loading-project="isLoadingProject"
+  :project-id="projectId"
+  :view-id="viewId"
+>
 		<template #header>
 			<div class="filter-container">
 				<FilterPopup
@@ -323,6 +323,7 @@ import ProjectViewService from '@/services/projectViews'
 import ProjectViewModel from '@/models/projectView'
 import TaskBucketService from '@/services/taskBucket'
 import TaskBucketModel from '@/models/taskBucket'
+import { watchEffect } from 'vue'
 
 const props = defineProps<{
 	isLoadingProject: boolean,
@@ -441,25 +442,17 @@ const loading = computed(() => kanbanStore.isLoading)
 const projectIdWithFallback = computed<number>(() => project.value?.id || projectId.value)
 
 const taskLoading = computed(() => taskStore.isLoading || taskPositionService.value.loading)
+watchEffect(() => {
+  const pid = Number(projectId.value)
+  const vid = Number(props.viewId)
 
-watch(
-	() => ({
-		params: params.value,
-		projectId: projectId.value,
-		viewId: props.viewId,
-	}),
-	({params, projectId, viewId}) => {
-		if (projectId === undefined || Number(projectId) === 0) {
-			return
-		}
-		collapsedBuckets.value = getCollapsedBucketState(projectId)
-		kanbanStore.loadBucketsForProject(projectId, viewId, params)
-	},
-	{
-		immediate: true,
-		deep: true,
-	},
-)
+  if (!pid || !vid) {
+    return
+  }
+
+  collapsedBuckets.value = getCollapsedBucketState(pid)
+  kanbanStore.loadBucketsForProject(pid, vid, params.value)
+})
 
 function setTaskContainerRef(id: IBucket['id'], el: HTMLElement) {
 	if (!el) return

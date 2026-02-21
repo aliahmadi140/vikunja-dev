@@ -71,14 +71,14 @@
 				:value="task.percentDone * 100"
 			/>
 			<div class="footer">
-				<Labels :labels="task.labels" />
+			<Labels :labels="task.labels ?? []" />
 				<PriorityLabel
-					:priority="task.priority"
+					:priority="task.priority ?? 0"
 					:done="task.done"
 					class="is-inline-flex is-align-items-center"
 				/>
 				<span
-					v-if="task.attachments.length > 0"
+					v-if="task.attachments?.length > 0"
 					class="icon"
 				>
 					<Icon icon="paperclip" />
@@ -90,7 +90,7 @@
 					<Icon icon="align-left" />
 				</span>
 				<span
-					v-if="task.repeatAfter.amount > 0"
+					v-if="task.repeatAfter?.amount > 0"
 					class="icon"
 				>
 					<Icon icon="history" />
@@ -100,7 +100,7 @@
 					class="project-task-icon"
 				/>
 				<AssigneeList
-					v-if="task.assignees.length > 0"
+					v-if="task.assignees?.length > 0"
 					:assignees="task.assignees"
 					:avatar-size="24"
 				/>
@@ -181,7 +181,7 @@ const isOverdue = computed(() => (
 ))
 
 async function toggleTaskDone(task: ITask) {
-	const isRecurringTask = task.repeatAfter.amount > 0 || task.repeatMode === TASK_REPEAT_MODES.REPEAT_MODE_MONTH
+	const isRecurringTask = task.repeatAfter?.amount > 0 || task.repeatMode === TASK_REPEAT_MODES.REPEAT_MODE_MONTH
 	const wasBeingMarkedDone = !task.done
 	
 	loadingInternal.value = true
@@ -205,11 +205,17 @@ async function toggleTaskDone(task: ITask) {
 }
 
 function openTaskDetail() {
-	router.push({
-		name: 'task.detail',
-		params: {id: props.task.id},
-		state: {backdropView: router.currentRoute.value.fullPath},
-	})
+  if (!props.task?.id || props.task.id <= 0) {
+    console.warn('Invalid task id, cannot open task detail', props.task)
+    return
+  }
+
+  router.push({
+    name: 'task.detail',
+    params: {
+      id: props.task.id,
+    },
+  })
 }
 
 const coverImageBlobUrl = ref<string | null>(null)
@@ -220,7 +226,7 @@ async function maybeDownloadCoverImage() {
 		return
 	}
 
-	const attachment = props.task.attachments.find(a => a.id === props.task.coverImageAttachmentId)
+	const attachment = props.task.attachments?.find(a => a.id === props.task.coverImageAttachmentId)
 	if (!attachment || !SUPPORTED_IMAGE_SUFFIX.some((suffix) => attachment.file.name.toLowerCase().endsWith(suffix))) {
 		return
 	}
