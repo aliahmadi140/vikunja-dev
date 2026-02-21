@@ -235,6 +235,69 @@
 							appear
 						>
 							<div
+								v-if="activeFields.estimation"
+								class="column"
+							>
+								<!-- Estimation -->
+								<div class="detail-title">
+									<Icon icon="hourglass-half" />
+									Estimation
+								</div>
+								<div class="estimation-inputs">
+									<input
+										type="number"
+										min="0"
+										class="input"
+										v-model="tempEstimationHours"
+										:disabled="!canWrite"
+										placeholder="Hours"
+									/>
+									<span>h</span>
+									<input
+										type="number"
+										min="0"
+										max="59"
+										class="input"
+										v-model="tempEstimationMinutes"
+										:disabled="!canWrite"
+										placeholder="Min"
+									/>
+									<span>m</span>
+									<BaseButton
+										v-if="canWrite && (tempEstimationHours > 0 || tempEstimationMinutes > 0)"
+										class="save-estimation"
+										@click="saveEstimation"
+									>
+										<span class="icon is-small">
+											<Icon icon="check" />
+										</span>
+									</BaseButton>
+									<BaseButton
+										v-if="task.estimation && canWrite"
+										class="remove"
+										@click="clearEstimation"
+									>
+										<span class="icon is-small">
+											<Icon icon="times" />
+										</span>
+									</BaseButton>
+								</div>
+								<!-- Estimation Display -->
+								<div v-if="task.estimation && task.estimation > 0" class="estimation-display">
+									<span class="icon is-small">
+										<Icon :icon="['far', 'clock']" />
+									</span>
+									<span class="estimation-text">
+										{{ formatEstimationDisplay(task.estimation) }}
+									</span>
+								</div>
+							</div>
+						</CustomTransition>
+						<CustomTransition
+							name="flash-background"
+							appear
+						>
+							<div
 								v-if="activeFields.reminders"
 								class="column"
 							>
@@ -545,6 +608,23 @@
 							{{ $t('task.detail.actions.endDate') }}
 						</XButton>
 						<XButton
+							variant="secondary"
+							icon="hourglass-half"
+							@click="setFieldActive('estimation')"
+						>
+							Estimation
+						</XButton>
+						<XButton
+							variant="secondary"
+							icon="clock"
+							@click="showWorklogModal = true"
+						>
+							Work Logs
+							<span v-if="worklogs.length > 0" class="tag is-info is-light is-small ml-2">
+								{{ worklogs.length }}
+							</span>
+						</XButton>
+						<XButton
 							v-shortcut="reminderShortcut"
 							variant="secondary"
 							:icon="['far', 'clock']"
@@ -574,6 +654,7 @@
 					<CreatedUpdated :task="task" />
 				</div>
 			</div>
+
 			<!-- Created / Updated [by] -->
 			<CreatedUpdated
 				v-if="!canWrite && !isModal"
@@ -591,6 +672,7 @@
 			<Icon icon="chevron-down" />
 		</BaseButton>
 
+		<!-- Delete Task Modal -->
 		<Modal
 			:enabled="showDeleteModal"
 			@close="showDeleteModal = false"
@@ -609,6 +691,178 @@
 				</p>
 			</template>
 		</Modal>
+
+		<!-- Work Logs Modal -->
+		<Modal
+			:enabled="showWorklogModal"
+			@close="showWorklogModal = false"
+			class="worklog-modal"
+		>
+			<template #header>
+				<div class="worklog-modal-header">
+					<span class="icon">
+						<Icon icon="clock" />
+					</span>
+					<span>Work Logs</span>
+					<span v-if="task.estimation" class="estimation-badge">
+						{{ formatWorklogDuration(getTotalLoggedTime()) }} / {{ formatWorklogDuration(task.estimation) }}
+					</span>
+				</div>
+			</template>
+
+			<template #text>
+				<!-- Progress Bar (if estimation exists) -->
+				<div v-if="task.estimation" class="worklog-progress mb-4">
+					<div class="progress-info">
+						<span>Time Logged</span>
+						<span class="progress-percentage">
+							{{ Math.min(Math.round((getTotalLoggedTime() / task.estimation) * 100), 100) }}%
+						</span>
+					</div>
+					<progress 
+						class="progress is-primary" 
+						:value="getTotalLoggedTime()" 
+						:max="task.estimation"
+					/>
+				</div>
+
+				<!-- Add Worklog Form -->
+				<div v-if="canWrite" class="worklog-add-form box">
+					<h4 class="title is-6 mb-3">
+						<span class="icon">
+							<Icon icon="plus" />
+						</span>
+						Log New Work
+					</h4>
+					
+					<div class="columns is-multiline">
+						<div class="column is-6">
+							<div class="field">
+								<label class="label">Time Spent</label>
+								<div class="time-inputs">
+									<div class="control">
+										<input
+											type="number"
+											min="0"
+											class="input"
+											v-model="tempWorklogHours"
+											placeholder="0"
+										/>
+										<span class="time-label">hours</span>
+									</div>
+									<div class="control">
+										<input
+											type="number"
+											min="0"
+											max="59"
+											class="input"
+											v-model="tempWorklogMinutes"
+											placeholder="0"
+										/>
+										<span class="time-label">minutes</span>
+									</div>
+								</div>
+							</div>
+						</div>
+						
+						<div class="column is-6">
+							<div class="field">
+								<label class="label">Date</label>
+								<input
+									type="date"
+									class="input"
+									v-model="newWorklog.logDate"
+								/>
+							</div>
+						</div>
+						
+						<div class="column is-12">
+							<div class="field">
+								<label class="label">Description <span class="has-text-grey-light">(optional)</span></label>
+								<textarea
+									class="textarea"
+									v-model="newWorklog.description"
+									placeholder="What did you work on?"
+									rows="2"
+								/>
+							</div>
+						</div>
+					</div>
+
+					<div class="field">
+						<BaseButton
+							variant="primary"
+							@click="addWorklogFromModal"
+							:disabled="tempWorklogHours === 0 && tempWorklogMinutes === 0"
+						>
+							<span class="icon is-small">
+								<Icon icon="check" />
+							</span>
+							<span>Log Work</span>
+						</BaseButton>
+					</div>
+				</div>
+
+				<!-- Worklogs List -->
+				<div v-if="worklogs.length > 0" class="worklogs-list-modal">
+					<h4 class="title is-6 mb-3">
+						<span class="icon">
+							<Icon icon="history" />
+						</span>
+						Work Log History
+					</h4>
+					
+					<div class="worklog-items">
+						<div
+							v-for="worklog in worklogs"
+							:key="worklog.id"
+							class="worklog-item-modal"
+						>
+							<div class="worklog-left">
+								<span class="worklog-duration-badge">
+									{{ formatWorklogDuration(worklog.duration) }}
+								</span>
+							</div>
+							
+							<div class="worklog-center">
+								<div class="worklog-meta">
+									<span class="worklog-date-modal">
+										<Icon icon="calendar" />
+										{{ new Date(worklog.logDate).toLocaleDateString() }}
+									</span>
+									<span v-if="worklog.user" class="worklog-user-modal">
+										<Icon icon="user" />
+										{{ worklog.user.name || worklog.user.username }}
+									</span>
+								</div>
+								<p v-if="worklog.description" class="worklog-desc">
+									{{ worklog.description }}
+								</p>
+							</div>
+							
+							<div class="worklog-right">
+								<BaseButton
+									v-if="canWrite"
+									class="is-danger is-small is-outlined"
+									@click="deleteWorklog(worklog.id)"
+								>
+									<span class="icon is-small">
+										<Icon icon="trash-alt" />
+									</span>
+								</BaseButton>
+							</div>
+						</div>
+					</div>
+				</div>
+
+				<div v-else class="has-text-centered has-text-grey py-4">
+					<span class="icon is-large">
+						<Icon icon="clock" />
+					</span>
+					<p>No work logged yet</p>
+				</div>
+			</template>
+		</Modal>
 	</div>
 </template>
 
@@ -623,6 +877,10 @@ import {klona} from 'klona/lite'
 import TaskService from '@/services/task'
 import TaskModel from '@/models/task'
 
+import TaskWorklogService from '@/services/taskWorklog'
+import TaskWorklogModel from '@/models/taskWorklog'
+import type {ITaskWorklog} from '@/modelTypes/ITaskWorklog'
+
 import type {ITask} from '@/modelTypes/ITask'
 import type {IProject} from '@/modelTypes/IProject'
 
@@ -630,6 +888,7 @@ import {PRIORITIES, type Priority} from '@/constants/priorities'
 import {PERMISSIONS} from '@/constants/permissions'
 
 import BaseButton from '@/components/base/BaseButton.vue'
+import Modal from '@/components/misc/Modal.vue'
 
 // partials
 import Attachments from '@/components/tasks/partials/Attachments.vue'
@@ -717,8 +976,6 @@ const lastProject = computed(() => {
 
 const lastProjectOrTaskProject = computed(() => lastProject.value ?? project.value)
 
-// Use Shift+R on macOS (Alt+R produces special characters depending on keyboard layout)
-// Use Alt+r on other platforms
 const reminderShortcut = computed(() => isAppleDevice() ? 'Shift+R' : 'Alt+r')
 
 onBeforeRouteLeave(async () => {
@@ -731,7 +988,7 @@ onBeforeRouteLeave(async () => {
 			const timeout = setTimeout(() => {
 				stop()
 				resolve()
-			}, 5000) // 5 second timeout
+			}, 5000)
 			
 			const stop = watch(lastProjectOrTaskProject, (p) => {
 				if (p) {
@@ -748,15 +1005,7 @@ onBeforeRouteLeave(async () => {
 	}
 })
 
-// We doubled the task color property here because verte does not have a real change property, leading
-// to the color property change being triggered when the # is removed from it, leading to an update,
-// which leads in turn to a change... This creates an infinite loop in which the task is updated, changed,
-// updated, changed, updated and so on.
-// To prevent this, we put the task color property in a separate value which is set to the task color
-// when it is saved and loaded.
 const taskColor = ref<ITask['hexColor']>('')
-
-// Used to avoid flashing of empty elements if the task content is not yet loaded.
 const visible = ref(false)
 
 const project = computed(() => projectStore.projects[task.value.projectId])
@@ -871,7 +1120,18 @@ onMounted(async () => {
 
 const taskService = shallowReactive(new TaskService())
 
-// load task
+// Worklog state
+const worklogService = shallowReactive(new TaskWorklogService())
+const worklogs = ref<ITaskWorklog[]>([])
+const newWorklog = ref({
+	duration: 0,
+	description: '',
+	logDate: new Date().toISOString().split('T')[0],
+})
+const tempWorklogHours = ref(0)
+const tempWorklogMinutes = ref(0)
+const showWorklogModal = ref(false)
+
 watch(
 	() => props.taskId,
 	async (id) => {
@@ -907,6 +1167,7 @@ watch(
 			scrollToHeading()
 			resolveScrollContainer()
 			updateScrollable()
+			await loadWorklogs()
 			visible.value = true
 		}
 	}, {immediate: true})
@@ -916,6 +1177,7 @@ type FieldType =
 	| 'attachments'
 	| 'color'
 	| 'dueDate'
+	| 'estimation'
 	| 'endDate'
 	| 'labels'
 	| 'moveProject'
@@ -931,6 +1193,7 @@ const activeFields: { [type in FieldType]: boolean } = reactive({
 	attachments: false,
 	color: false,
 	dueDate: false,
+	estimation: false,
 	endDate: false,
 	labels: false,
 	moveProject: false,
@@ -943,14 +1206,10 @@ const activeFields: { [type in FieldType]: boolean } = reactive({
 })
 
 function setActiveFields() {
-	// FIXME: are these lines necessary?
-	// task.startDate = task.startDate || null
-	// task.endDate = task.endDate || null
-
-	// Set all active fields based on values in the model
 	activeFields.assignees = task.value.assignees.length > 0
 	activeFields.attachments = task.value.attachments.length > 0
 	activeFields.dueDate = task.value.dueDate !== null
+	activeFields.estimation = task.value.estimation !== null && task.value.estimation > 0
 	activeFields.endDate = task.value.endDate !== null
 	activeFields.labels = task.value.labels.length > 0
 	activeFields.percentDone = task.value.percentDone > 0
@@ -966,6 +1225,7 @@ const activeFieldElements: { [id in FieldType]: HTMLElement | null } = reactive(
 	attachments: null,
 	color: null,
 	dueDate: null,
+	estimation: null,
 	endDate: null,
 	labels: null,
 	moveProject: null,
@@ -991,8 +1251,6 @@ function setFieldActive(fieldName: keyof typeof activeFields) {
 		}
 
 		el.focus()
-
-		// scroll the field to the center of the screen if not in viewport already
 		scrollIntoView(el)
 	})
 }
@@ -1011,8 +1269,6 @@ async function saveTask(
 
 	currentTask.hexColor = taskColor.value
 
-	// If no end date is being set, but a start date and due date,
-	// use the due date as the end date
 	if (
 		currentTask.endDate === null &&
 		currentTask.startDate !== null &&
@@ -1021,8 +1277,20 @@ async function saveTask(
 		currentTask.endDate = currentTask.dueDate
 	}
 
-	const updatedTask = await taskStore.update(currentTask) // TODO: markraw ?
-	Object.assign(task.value, updatedTask)
+const updatedTask = await taskStore.update(currentTask)
+
+const preserved = {
+    createdBy: task.value.createdBy,
+    created: task.value.created,
+    comments: task.value.comments,
+    worklogs: task.value.worklogs,
+    reactions: task.value.reactions,
+    attachments: task.value.attachments,
+    labels: task.value.labels,
+    assignees: task.value.assignees,
+}
+
+Object.assign(task.value, updatedTask, preserved)
 	setActiveFields()
 
 	let actions: MessageAction[] = []
@@ -1041,6 +1309,120 @@ useTaskDetailShortcuts({
 	onSave: saveTask,
 })
 
+// Estimation
+const tempEstimationHours = ref(0)
+const tempEstimationMinutes = ref(0)
+
+watch(() => task.value.estimation, (newEstimation) => {
+	if (newEstimation) {
+		tempEstimationHours.value = Math.floor(newEstimation / 3600)
+		tempEstimationMinutes.value = Math.floor((newEstimation % 3600) / 60)
+	} else {
+		tempEstimationHours.value = 0
+		tempEstimationMinutes.value = 0
+	}
+}, { immediate: true })
+
+async function saveEstimation() {
+	const total = (tempEstimationHours.value || 0) * 3600 + (tempEstimationMinutes.value || 0) * 60
+	task.value.estimation = total > 0 ? total : null
+	await saveTask()
+}
+
+function clearEstimation() {
+	task.value.estimation = null
+	tempEstimationHours.value = 0
+	tempEstimationMinutes.value = 0
+	saveTask()
+}
+
+function formatEstimationDisplay(seconds: number): string {
+	const hours = Math.floor(seconds / 3600)
+	const minutes = Math.floor((seconds % 3600) / 60)
+	
+	const parts = []
+	if (hours > 0) {
+		parts.push(`${hours} hour${hours > 1 ? 's' : ''}`)
+	}
+	if (minutes > 0) {
+		parts.push(`${minutes} minute${minutes > 1 ? 's' : ''}`)
+	}
+	
+	return parts.length > 0 ? parts.join(' ') : '0 minutes'
+}
+
+// Worklog functions
+async function loadWorklogs() {
+	if (!task.value.id) return
+	try {
+		worklogs.value = await worklogService.getAllByTask(task.value.id)
+	} catch (e) {
+		console.error('Failed to load worklogs:', e)
+	}
+}
+
+async function addWorklog() {
+	if (tempWorklogHours.value === 0 && tempWorklogMinutes.value === 0) {
+		return
+	}
+
+	const duration = (tempWorklogHours.value || 0) * 3600 + (tempWorklogMinutes.value || 0) * 60
+	
+	try {
+		const worklog = await worklogService.createForTask(task.value.id, {
+			taskId: task.value.id,
+			duration,
+			description: newWorklog.value.description,
+			log_date: newWorklog.value.logDate,
+		})
+		
+		worklogs.value.unshift(worklog)
+		
+		// Reset form
+		tempWorklogHours.value = 0
+		tempWorklogMinutes.value = 0
+		newWorklog.value.description = ''
+		newWorklog.value.logDate = new Date().toISOString().split('T')[0]
+		
+		success({message: 'Work log added successfully'})
+	} catch (e) {
+		console.error('Failed to add worklog:', e)
+	}
+}
+
+async function addWorklogFromModal() {
+	await addWorklog()
+	// Don't close modal - let user add more if needed
+}
+
+async function deleteWorklog(worklogId: number) {
+	try {
+		await worklogService.deleteForTask(task.value.id, worklogId)
+		worklogs.value = worklogs.value.filter(w => w.id !== worklogId)
+		success({message: 'Work log deleted successfully'})
+	} catch (e) {
+		console.error('Failed to delete worklog:', e)
+	}
+}
+
+function formatWorklogDuration(seconds: number): string {
+	const hours = Math.floor(seconds / 3600)
+	const minutes = Math.floor((seconds % 3600) / 60)
+	
+	if (hours > 0 && minutes > 0) {
+		return `${hours}h ${minutes}m`
+	} else if (hours > 0) {
+		return `${hours}h`
+	} else {
+		return `${minutes}m`
+	}
+}
+
+function getTotalLoggedTime(): number {
+	return worklogs.value.reduce((total, w) => total + w.duration, 0)
+}
+
+// Delete task
 const showDeleteModal = ref(false)
 
 async function deleteTask() {
@@ -1109,7 +1491,6 @@ async function removeRepeatAfter() {
 function setRelatedTasksActive() {
 	setFieldActive('relatedTasks')
 
-	// If the related tasks are already available, show the form again
 	const el = activeFieldElements['relatedTasks']
 	for (const child in el?.children) {
 		if (el?.children[child]?.id === 'showRelatedTasksFormButton') {
@@ -1122,7 +1503,6 @@ function setRelatedTasksActive() {
 
 <style lang="scss" scoped>
 .task-view-container {
-	// simulate sass lighten($primary, 30) by increasing lightness 30% to 73%
 	--primary-light: hsla(var(--primary-h), var(--primary-s), 73%, var(--primary-a));
 	padding-block-end: 0;
 
@@ -1159,7 +1539,6 @@ function setRelatedTasksActive() {
 .is-loading .task-view * {
 	opacity: 0;
 }
-
 
 .subtitle {
 	color: var(--grey-500);
@@ -1227,12 +1606,10 @@ h3 .button {
 		font-style: italic;
 	}
 
-	// Break after the 2nd element
 	.column:nth-child(2n) {
-		page-break-after: always; // CSS 2.1 syntax
-		break-after: always; // New syntax
+		page-break-after: always;
+		break-after: always;
 	}
-
 }
 
 .details.labels-list,
@@ -1329,12 +1706,9 @@ h3 .button {
 }
 
 .is-modal .action-buttons {
-	// we need same top margin for the modal close button 
 	@media screen and (min-width: $tablet) {
 		inset-block-start: 6.5rem;
 	}
-	// this is the moment when the fixed close button is outside the modal
-	// => we can fill up the space again
 	@media screen and (width >= calc(#{$desktop} + 84px)) {
 		inset-block-start: 0;
 	}
@@ -1361,7 +1735,6 @@ h3 .button {
 
 .scroll-to-comments-button {
 	position: fixed;
-	// Position above the keyboard shortcuts button (which is at bottom: calc(1rem - 4px))
 	inset-block-end: 2.5rem;
 	inset-inline-end: .75rem;
 	z-index: 10;
@@ -1384,14 +1757,220 @@ h3 .button {
 	}
 
 	@media screen and (max-width: $tablet) {
-		// Hide on mobile since keyboard shortcuts button is also hidden
 		display: none;
 	}
+}
+
+.estimation-inputs {
+	display: flex;
+	align-items: center;
+	gap: .5rem;
+
+	.input {
+		max-inline-size: 5rem;
+	}
+
+	span {
+		color: var(--grey-500);
+		font-size: .85rem;
+	}
+
+	.save-estimation {
+		color: var(--success);
+		padding: 0.25rem 0.5rem;
+		
+		&:hover {
+			background-color: var(--success);
+			color: white;
+		}
+	}
+}
+
+.estimation-display {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	margin-block-start: 0.75rem;
+	padding: 0.5rem 0.75rem;
+	background-color: var(--grey-100);
+	border-radius: var(--radius);
+	color: var(--grey-700);
+	
+	.icon {
+		color: var(--primary);
+	}
+	
+	.estimation-text {
+		font-weight: 500;
+		font-size: 0.95rem;
+	}
+}
+
+// Worklog Modal Styles
+.worklog-modal-header {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	
+	.estimation-badge {
+		margin-inline-start: auto;
+		background: var(--primary-light);
+		color: var(--primary);
+		padding: 0.25rem 0.75rem;
+		border-radius: 1rem;
+		font-size: 0.85rem;
+		font-weight: 600;
+	}
+}
+
+.worklog-progress {
+	.progress-info {
+		display: flex;
+		justify-content: space-between;
+		margin-block-end: 0.5rem;
+		font-size: 0.9rem;
+		color: var(--grey-600);
+	}
+	
+	.progress-percentage {
+		font-weight: 600;
+		color: var(--primary);
+	}
+	
+	.progress {
+		height: 0.5rem;
+		border-radius: 0.25rem;
+	}
+}
+
+.worklog-add-form {
+	background: var(--grey-50);
+	border: 1px dashed var(--grey-300);
+	
+	.title {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+	}
+}
+
+.time-inputs {
+	display: flex;
+	gap: 1rem;
+	
+	.control {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		
+		.input {
+			width: 5rem;
+			text-align: center;
+		}
+		
+		.time-label {
+			color: var(--grey-500);
+			font-size: 0.85rem;
+		}
+	}
+}
+
+.worklogs-list-modal {
+	margin-block-start: 1.5rem;
+	
+	.title {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+	}
+}
+
+.worklog-items {
+	display: flex;
+	flex-direction: column;
+	gap: 0.75rem;
+	max-height: 300px;
+	overflow-y: auto;
+}
+
+.worklog-item-modal {
+	display: flex;
+	align-items: flex-start;
+	gap: 1rem;
+	padding: 0.75rem;
+	background: var(--white);
+	border: 1px solid var(--grey-200);
+	border-radius: var(--radius);
+	transition: all 0.2s ease;
+	
+	&:hover {
+		border-color: var(--primary-light);
+		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+	}
+}
+
+.worklog-left {
+	flex-shrink: 0;
+}
+
+.worklog-duration-badge {
+	display: inline-block;
+	background: var(--primary);
+	color: white;
+	padding: 0.25rem 0.75rem;
+	border-radius: 1rem;
+	font-weight: 600;
+	font-size: 0.9rem;
+}
+
+.worklog-center {
+	flex: 1;
+	min-width: 0;
+}
+
+.worklog-meta {
+	display: flex;
+	gap: 1rem;
+	font-size: 0.85rem;
+	color: var(--grey-500);
+	margin-block-end: 0.25rem;
+	
+	span {
+		display: flex;
+		align-items: center;
+		gap: 0.25rem;
+	}
+}
+
+.worklog-desc {
+	color: var(--grey-700);
+	font-size: 0.9rem;
+	margin: 0;
+}
+
+.worklog-right {
+	flex-shrink: 0;
+}
+
+.ml-2 {
+	margin-left: 0.5rem;
+}
+
+.mb-3 {
+	margin-bottom: 0.75rem;
+}
+
+.mb-4 {
+	margin-bottom: 1rem;
+}
+
+.py-4 {
+	padding-top: 1rem;
+	padding-bottom: 1rem;
 }
 </style>
 
 <style lang="scss">
-// global style to override position when the modal task detail is active
 .modal-content .scroll-to-comments-button {
 	inset-block-end: .75rem;
 	inset-inline-end: 1rem;

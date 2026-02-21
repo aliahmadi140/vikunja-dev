@@ -7,7 +7,7 @@ import type {ITask, ITaskPartialWithId} from '@/modelTypes/ITask'
 import TaskCollectionService, {type TaskFilterParams} from '@/services/taskCollection'
 import TaskService from '@/services/task'
 
-import TaskModel from '@/models/task'
+import TaskModel from '@/services/task'
 import {error, success} from '@/message'
 import {useAuthStore} from '@/stores/auth'
 import type {IProjectView} from '@/modelTypes/IProjectView'

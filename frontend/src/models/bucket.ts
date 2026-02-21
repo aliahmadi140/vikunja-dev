@@ -1,6 +1,6 @@
 import AbstractModel from './abstractModel'
 import UserModel from './user'
-import TaskModel from './task'
+import TaskModel from '../services/task'
 
 import type {IBucket} from '@/modelTypes/IBucket'
 import type {ITask} from '@/modelTypes/ITask'

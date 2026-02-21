@@ -7,6 +7,7 @@ import type {IAttachment} from './IAttachment'
 import type {ISubscription} from './ISubscription'
 import type {IProject} from './IProject'
 import type {IBucket} from './IBucket'
+import type {ITaskWorklog} from './ITaskWorklog'
 
 import type {IRelationKind} from '@/types/IRelationKind'
 import type {IRepeatAfter} from '@/types/IRepeatAfter'
@@ -30,6 +31,7 @@ export interface ITask extends IAbstract {
 	dueDate: Date | null
 	startDate: Date | null
 	endDate: Date | null
+	estimation: number | null
 	repeatAfter: number | IRepeatAfter
 	repeatFromCurrentDate: boolean
 	repeatMode: IRepeatMode
@@ -51,12 +53,14 @@ export interface ITask extends IAbstract {
 	reactions: IReactionPerEntity
 	comments: ITaskComment[]
 	commentCount?: number
+	
+	worklogs: ITaskWorklog[]
 
 	createdBy: IUser
 	created: Date
 	updated: Date
 
-	projectId: IProject['id'] // Meta, only used when creating a new task
+	projectId: IProject['id']
 	bucketId: IBucket['id']
 }
 

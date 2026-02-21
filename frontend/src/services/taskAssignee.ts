@@ -5,12 +5,13 @@ import type {ITaskAssignee} from '@/modelTypes/ITaskAssignee'
 export default class TaskAssigneeService extends AbstractService<ITaskAssignee> {
 	constructor() {
 		super({
+			getAll: '/tasks/{id}/assignees',
 			create: '/tasks/{taskId}/assignees',
 			delete: '/tasks/{taskId}/assignees/{userId}',
 		})
 	}
 
-	modelFactory(data) {
+	modelFactory(data: Partial<ITaskAssignee>): TaskAssigneeModel {
 		return new TaskAssigneeModel(data)
 	}
 }

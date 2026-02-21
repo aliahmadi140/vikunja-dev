@@ -443,6 +443,17 @@ func registerAPIRoutes(a *echo.Group) {
 	a.DELETE("/tasks/:projecttask", taskHandler.DeleteWeb)
 	a.POST("/tasks/:projecttask", taskHandler.UpdateWeb)
 
+	// Task WorkLogs
+	taskWorklogHandler := &handler.WebHandler{
+		EmptyStruct: func() handler.CObject {
+			return &models.TaskWorklog{}
+		},
+	}
+	a.GET("/tasks/:task/worklogs", taskWorklogHandler.ReadAllWeb)
+a.POST("/tasks/:task/worklogs", taskWorklogHandler.CreateWeb)
+a.PUT("/tasks/:task/worklogs/:id", taskWorklogHandler.UpdateWeb)
+a.DELETE("/tasks/:task/worklogs/:id", taskWorklogHandler.DeleteWeb)
+
 	taskUnreadStatusHandler := &handler.WebHandler{
 		EmptyStruct: func() handler.CObject {
 			return &models.TaskUnreadStatus{}

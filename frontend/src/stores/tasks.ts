@@ -11,7 +11,7 @@ import {cleanupItemText, parseTaskText, PREFIXES} from '@/modules/parseTaskText'
 import TaskAssigneeModel from '@/models/taskAssignee'
 import LabelTaskModel from '@/models/labelTask'
 import LabelTask from '@/models/labelTask'
-import TaskModel from '@/models/task'
+import TaskModel from '@/services/task'
 import LabelModel from '@/models/label'
 
 import type {ILabel} from '@/modelTypes/ILabel'
@@ -132,23 +132,27 @@ export const useTaskStore = defineStore('task', () => {
 	}
 
 	async function loadTasks(
-		params: TaskFilterParams, 
+		params: TaskFilterParams,
 		projectId: IProject['id'] | null = null,
 	) {
-		
 		if (!params.filter_timezone || params.filter_timezone === '') {
 			params.filter_timezone = authStore.settings.timezone
 		}
-
+	
 		const cancel = setModuleLoading(setIsLoading)
 		try {
-			const model = {}
-			let taskCollectionService = new TaskService()
-			if (projectId !== null) {
+			const model: any = {}
+	
+			
+			if (typeof projectId === 'number' && projectId > 0) {
 				model.projectId = projectId
-				taskCollectionService = new TaskCollectionService()
+				const service = new TaskCollectionService()
+				tasks.value = await service.getAll(model, params)
+			} else {
+				const service = new TaskCollectionService()
+				tasks.value = await service.getAll({}, params)
 			}
-			tasks.value = await taskCollectionService.getAll(model, params)
+	
 			baseStore.setHasTasks(tasks.value.length > 0)
 			return tasks.value
 		} finally {

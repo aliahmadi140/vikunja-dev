@@ -1,7 +1,7 @@
 import AbstractModel from './abstractModel'
 import {parseDateOrNull} from '@/helpers/parseDateOrNull'
 import UserModel, {getDisplayName} from '@/models/user'
-import TaskModel from '@/models/task'
+import TaskModel from '@/services/task'
 import TaskCommentModel from '@/models/taskComment'
 import ProjectModel from '@/models/project'
 import TeamModel from '@/models/team'

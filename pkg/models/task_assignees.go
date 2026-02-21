@@ -311,41 +311,61 @@ func (t *Task) addNewAssigneeByID(s *xorm.Session, newAssigneeID int64, project 
 // @Success 200 {array} user.User "The assignees"
 // @Failure 500 {object} models.Message "Internal error"
 // @Router /tasks/{taskID}/assignees [get]
-func (la *TaskAssginee) ReadAll(s *xorm.Session, a web.Auth, search string, page int, perPage int) (result interface{}, resultCount int, numberOfTotalItems int64, err error) {
-	task, err := GetProjectSimpleByTaskID(s, la.TaskID)
+func (la *TaskAssginee) ReadAll(
+	s *xorm.Session,
+	a web.Auth,
+	search string,
+	page int,
+	perPage int,
+) (result interface{}, resultCount int, numberOfTotalItems int64, err error) {
+
+	taskExists, err := s.
+		Where("id = ?", la.TaskID).
+		Exist(&Task{})
+	if err != nil {
+		return nil, 0, 0, err
+	}
+	if !taskExists {
+		return nil, 0, 0, ErrTaskDoesNotExist{}
+	}
+
+	task, err := GetTaskByIDSimple(s, la.TaskID)
 	if err != nil {
 		return nil, 0, 0, err
 	}
 
-	can, _, err := task.CanRead(s, a)
+	canRead, _, err := task.CanRead(s, a)
 	if err != nil {
 		return nil, 0, 0, err
 	}
-	if !can {
+	if !canRead {
 		return nil, 0, 0, ErrGenericForbidden{}
 	}
+
 	limit, start := getLimitFromPageIndex(page, perPage)
-	var taskAssignees []*user.User
+
+	taskAssignees := []*user.User{}
+
 	query := s.Table("task_assignees").
 		Select("users.*").
-		Join("INNER", "users", "task_assignees.user_id = users.id").
+		Join("LEFT", "users", "task_assignees.user_id = users.id").
 		Where(builder.And(
-			builder.Eq{"task_id": la.TaskID},
+			builder.Eq{"task_assignees.task_id": la.TaskID},
 			db.ILIKE("users.username", search),
 		))
+
 	if limit > 0 {
 		query = query.Limit(limit, start)
 	}
-	err = query.Find(&taskAssignees)
-	if err != nil {
+
+	if err = query.Find(&taskAssignees); err != nil {
 		return nil, 0, 0, err
 	}
 
 	numberOfTotalItems, err = s.Table("task_assignees").
-		Select("users.*").
-		Join("INNER", "users", "task_assignees.user_id = users.id").
-		Where("task_id = ? AND users.username LIKE ?", la.TaskID, "%"+search+"%").
-		Count(&user.User{})
+		Where("task_id = ?", la.TaskID).
+		Count(&TaskAssginee{})
+
 	return taskAssignees, len(taskAssignees), numberOfTotalItems, err
 }
 

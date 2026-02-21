@@ -1,6 +1,6 @@
 import AbstractModel from '@/models/abstractModel'
 import type {ITaskBucket} from '@/modelTypes/ITaskBucket'
-import TaskModel from '@/models/task.ts'
+import TaskModel from '@/services/task'
 import BucketModel from '@/models/bucket.ts'
 
 export default class TaskBucketModel extends AbstractModel<ITaskBucket> implements ITaskBucket {

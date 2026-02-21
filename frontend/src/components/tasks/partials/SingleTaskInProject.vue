@@ -53,25 +53,27 @@
 					/>
 
 					<TaskGlanceTooltip :task="task">
-						<RouterLink
-							ref="taskLinkRef"
-							:to="taskDetailRoute"
-							class="task-link"
-							tabindex="-1"
-						>
-							{{ task.title }}
-						</RouterLink>
+					<RouterLink
+	v-if="task.id"
+	ref="taskLinkRef"
+	:to="taskDetailRoute"
+	class="task-link"
+	tabindex="-1"
+>
+	{{ task.title }}
+</RouterLink>
+<span v-else class="task-link">{{ task.title }}</span>
 					</TaskGlanceTooltip>
 				</span>
 
-				<Labels
-					v-if="task.labels.length > 0"
-					class="labels mis-2 mie-1"
-					:labels="task.labels"
-				/>
+<Labels
+    v-if="task.labels?.length > 0"
+    class="labels mis-2 mie-1"
+    :labels="task.labels"
+/>
 
 				<AssigneeList
-					v-if="task.assignees.length > 0"
+					v-if="task.assignees?.length > 0"
 					:assignees="task.assignees"
 					:avatar-size="25"
 					class="mis-1"
@@ -108,7 +110,7 @@
 
 				<span>
 					<span
-						v-if="task.attachments.length > 0"
+						v-if="task.attachments?.length > 0"
 						class="project-task-icon"
 					>
 						<Icon icon="paperclip" />
@@ -256,8 +258,10 @@ const {t} = useI18n({useScope: 'global'})
 const taskService = shallowReactive(new TaskService())
 const task = ref<ITask>(new TaskModel())
 
-const isRepeating = computed(() => task.value.repeatAfter.amount > 0 || (task.value.repeatAfter.amount === 0 && task.value.repeatMode === TASK_REPEAT_MODES.REPEAT_MODE_MONTH))
-
+const isRepeating = computed(() => 
+    task.value.repeatAfter?.amount > 0 || 
+    (task.value.repeatAfter?.amount === 0 && task.value.repeatMode === TASK_REPEAT_MODES.REPEAT_MODE_MONTH)
+)
 watch(
 	() => props.theTask,
 	newVal => {
@@ -285,12 +289,15 @@ const currentProject = computed(() => {
 	} : baseStore.currentProject
 })
 
-const taskDetailRoute = computed(() => ({
-	name: 'task.detail',
-	params: {id: task.value.id},
-	// TODO: re-enable opening task detail in modal
-	// state: { backdropView: router.currentRoute.value.fullPath },
-}))
+const taskDetailRoute = computed(() => {
+	if (!task.value.id) {
+		return { name: 'home' }
+	}
+	return {
+		name: 'task.detail',
+		params: {id: task.value.id},
+	}
+})
 
 function updateDueDate() {
 	if (!task.value.dueDate) {

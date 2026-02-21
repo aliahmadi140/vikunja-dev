@@ -261,10 +261,10 @@ async function loadPendingTasks(from: Date|string, to: Date|string, filterId: nu
 		params.filter += params.filter ? ` && ${labelFilter}` : labelFilter
 	}
 
-	let projectId = null
-	if (showAll.value && filterId && typeof projectStore.projects[filterId] !== 'undefined') {
-		projectId = filterId
-	}
+let projectId = null
+if (showAll.value && filterId && typeof projectStore.projects[filterId] !== 'undefined') {
+  projectId = filterId
+}
 
 	tasks.value = await taskStore.loadTasks(params, projectId)
 	emit('tasksLoaded', true)

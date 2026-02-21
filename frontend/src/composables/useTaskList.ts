@@ -121,11 +121,18 @@ export function useTaskList(
 
 	const tasks = ref<ITask[]>([])
 	async function loadTasks(resetBeforeLoad: boolean = true) {
+		  // Guard: Don't load if projectId is not ready
+		  if (!projectId.value) {
+			return []
+		  }
+		
 		if(resetBeforeLoad) {
 			tasks.value = []
 		}
 		try {
-			tasks.value = await taskCollectionService.getAll(...getAllTasksParams.value)
+			const result =	tasks.value = await taskCollectionService.getAll(...getAllTasksParams.value)
+		
+		tasks.value = result
 		} catch (e) {
 			error(e)
 		}

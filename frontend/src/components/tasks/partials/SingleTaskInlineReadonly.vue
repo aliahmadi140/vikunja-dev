@@ -61,7 +61,14 @@
 				– {{ $t('task.detail.due', {at: formatDisplayDate(task.dueDate)}) }}
 			</time>
 		</span>
-
+<span
+	v-if="task.duration"
+	class="task-duration"
+	v-tooltip="formatDuration(task.duration)"
+>
+	<Icon :icon="['far', 'clock']" />
+	{{ formatDurationShort(task.duration) }}
+</span>
 		<span>
 			<span
 				v-if="task.attachments.length > 0"
@@ -123,6 +130,33 @@ const props = withDefaults(defineProps<{
 const projectStore = useProjectStore()
 
 const project = computed(() => projectStore.projects[props.task.projectId])
+
+function formatDuration(seconds: number): string {
+	const hours = Math.floor(seconds / 3600)
+	const minutes = Math.floor((seconds % 3600) / 60)
+	
+	if (hours > 0 && minutes > 0) {
+		return `${hours} hour${hours > 1 ? 's' : ''} ${minutes} minute${minutes > 1 ? 's' : ''}`
+	} else if (hours > 0) {
+		return `${hours} hour${hours > 1 ? 's' : ''}`
+	} else {
+		return `${minutes} minute${minutes > 1 ? 's' : ''}`
+	}
+}
+
+function formatDurationShort(seconds: number): string {
+	const hours = Math.floor(seconds / 3600)
+	const minutes = Math.floor((seconds % 3600) / 60)
+	
+	if (hours > 0 && minutes > 0) {
+		return `${hours}h ${minutes}m`
+	} else if (hours > 0) {
+		return `${hours}h`
+	} else {
+		return `${minutes}m`
+	}
+}
+
 </script>
 
 <style lang="scss" scoped>
@@ -198,5 +232,14 @@ const project = computed(() => projectStore.projects[props.task.projectId])
 		inline-size: auto;
 		margin-inline-start: .25rem;
 	}
+}
+
+.task-duration {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.25rem;
+	color: var(--grey-500);
+	font-size: 0.875rem;
+	margin-inline-start: 0.5rem;
 }
 </style>

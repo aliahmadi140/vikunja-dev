@@ -77,6 +77,7 @@ type Task struct {
 	StartDate time.Time `xorm:"DATETIME INDEX null 'start_date'" json:"start_date" query:"-"`
 	// When this task ends.
 	EndDate time.Time `xorm:"DATETIME INDEX null 'end_date'" json:"end_date" query:"-"`
+	Estimation *int64 `xorm:"BIGINT null" json:"estimation"`
 	// An array of users who are assigned to this task
 	Assignees []*user.User `xorm:"-" json:"assignees"`
 	// An array of labels which are associated with this task. This property is read-only, you must use the separate endpoint to add labels to a task.
@@ -99,6 +100,9 @@ type Task struct {
 
 	// All attachments this task has. This property is read-onlym, you must use the separate endpoint to add attachments to a task.
 	Attachments []*TaskAttachment `xorm:"-" json:"attachments"`
+
+	// All worklogs for this task
+	Worklogs []*TaskWorklog `xorm:"-" json:"worklogs"`
 
 	// If this task has a cover image, the field will return the id of the attachment that is the cover image.
 	CoverImageAttachmentID int64 `xorm:"bigint default 0" json:"cover_image_attachment_id"`
@@ -748,6 +752,11 @@ func addMoreInfoToTasks(s *xorm.Session, taskMap map[int64]*Task, a web.Auth, vi
 				if err != nil {
 					return
 				}
+			case TaskCollectionExpandWorklogs:
+				err = addWorklogsToTasks(s, taskIDs, taskMap)
+				if err != nil {
+					return err
+				}
 			}
 			expanded[expandable] = true
 		}
@@ -1115,6 +1124,7 @@ func (t *Task) updateSingleTask(s *xorm.Session, a web.Auth, fields []string) (e
 		"priority",
 		"start_date",
 		"end_date",
+		"estimation",
 		"hex_color",
 		"percent_done",
 		"project_id",
@@ -1358,6 +1368,10 @@ func (t *Task) updateSingleTask(s *xorm.Session, a web.Auth, fields []string) (e
 	// End date
 	if t.EndDate.IsZero() {
 		ot.EndDate = time.Time{}
+	}
+	// Estimation
+	if t.Estimation == nil {
+		ot.Estimation = nil
 	}
 	// Color
 	if t.HexColor == "" {
@@ -1890,11 +1904,21 @@ func (t *Task) ReadOne(s *xorm.Session, a web.Auth) (err error) {
 		return
 	}
 
+	// Add worklogs for single task view
+	err = addWorklogsToTasks(s, []int64{t.ID}, taskMap)
+	if err != nil {
+		return
+	}
+
 	if len(taskMap) == 0 {
 		return ErrTaskDoesNotExist{t.ID}
 	}
 
 	*t = *taskMap[t.ID]
+	log.Debugf("Task %d has %d worklogs", t.ID, len(t.Worklogs))
+	if t.Worklogs == nil {
+		t.Worklogs = []*TaskWorklog{}
+	}
 
 	subs, err := GetSubscriptionForUser(s, SubscriptionEntityTask, t.ID, a)
 	if err != nil && IsErrProjectDoesNotExist(err) {
@@ -1919,4 +1943,48 @@ func triggerTaskUpdatedEventForTaskID(s *xorm.Session, auth web.Auth, taskID int
 		Doer: doer,
 	})
 	return err
+}
+
+// Get worklogs for tasks
+func addWorklogsToTasks(s *xorm.Session, taskIDs []int64, taskMap map[int64]*Task) (err error) {
+	if len(taskIDs) == 0 {
+		return nil
+	}
+	log.Debugf("Loading worklogs for tasks: %v", taskIDs)
+
+	worklogs := []*TaskWorklog{}
+	err = s.In("task_id", taskIDs).
+		OrderBy("log_date DESC, created DESC").
+		Find(&worklogs)
+	if err != nil {
+		return err
+	}
+	log.Debugf("Found %d worklogs", len(worklogs))
+
+	// Get all user IDs
+	userIDs := []int64{}
+	for _, w := range worklogs {
+		userIDs = append(userIDs, w.UserID)
+	}
+
+	// Get all users
+	users := make(map[int64]*user.User)
+	if len(userIDs) > 0 {
+		err = s.In("id", userIDs).Find(&users)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Attach worklogs and users to tasks
+	for _, w := range worklogs {
+		if u, exists := users[w.UserID]; exists {
+			w.User = u
+		}
+		if task, exists := taskMap[w.TaskID]; exists {
+			task.Worklogs = append(task.Worklogs, w)
+		}
+	}
+
+	return nil
 }

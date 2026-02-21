@@ -1,5 +1,5 @@
 import AbstractModel from './abstractModel'
-import TaskModel from '@/models/task'
+import TaskModel from '@/services/task'
 import UserModel from '@/models/user'
 import SubscriptionModel from '@/models/subscription'
 import ProjectViewModel from '@/models/projectView'

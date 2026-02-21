@@ -72,6 +72,7 @@ func (c *WebHandler) ReadOneWeb(ctx *echo.Context) error {
 	}
 
 	// Get our object
+	log.Errorf("STRUCT TYPE: %T", currentStruct)
 	err = currentStruct.ReadOne(s, currentAuth)
 	if err != nil {
 		_ = s.Rollback()
