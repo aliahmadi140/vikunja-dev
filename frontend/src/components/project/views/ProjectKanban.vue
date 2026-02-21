@@ -623,6 +623,9 @@ async function addTaskToBucket(bucketId: IBucket['id']) {
 		bucketId,
 		projectId: projectIdWithFallback.value,
 	})
+
+	task.bucketId = bucketId
+
 	newTaskText.value = ''
 	kanbanStore.addTaskToBucket(task)
 	scrollTaskContainerToTop(bucketId)

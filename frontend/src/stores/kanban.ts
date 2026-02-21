@@ -194,18 +194,36 @@ export const useKanbanStore = defineStore('kanban', () => {
 	}
 
 	function addTaskToBucket(task: ITask) {
-		const bucketIndex = findIndexById(buckets.value, task.bucketId)
-		const oldBucket = buckets.value[bucketIndex]
-		const newBucket = {
-			...oldBucket,
-			count: (oldBucket?.count || 0) + 1,
-			tasks: [
-				task,
-				...oldBucket.tasks,
-			],
-		}
-		buckets.value[bucketIndex] = newBucket
+	const bucketId = Number(task.bucketId)
+
+	if (!bucketId) {
+		console.error('[Kanban] task.bucketId is missing', task)
+		return
 	}
+
+	const bucketIndex = findIndexById(buckets.value, bucketId)
+
+	if (bucketIndex === -1) {
+		console.error('[Kanban] Bucket not found for task', {
+			bucketId,
+			availableBuckets: buckets.value.map(b => b.id),
+		})
+		return
+	}
+
+	const oldBucket = buckets.value[bucketIndex]
+
+	const newBucket = {
+		...oldBucket,
+		count: (oldBucket.count || 0) + 1,
+		tasks: [
+			task,
+			...oldBucket.tasks,
+		],
+	}
+
+	buckets.value[bucketIndex] = newBucket
+}
 
 	function addTasksToBucket(tasks: ITask[], bucketId: IBucket['id']) {
 		const bucketIndex = findIndexById(buckets.value, bucketId)

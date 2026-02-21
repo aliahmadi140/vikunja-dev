@@ -37,12 +37,10 @@ export default class TaskCollectionService extends AbstractService<ITask> {
     }
 
     getReplacedRoute(path: string, pathparams: Record<string, unknown>): string {
-        // ✅ اگر projectId نداریم، از endpoint عمومی استفاده کن
         if (!pathparams.projectId) {
             return '/tasks'
         }
         
-        // اگر viewId نداریم، از endpoint پروژه‌ای بدون view استفاده کن
         if (!pathparams.viewId) {
             return super.getReplacedRoute('/projects/{projectId}/tasks', pathparams)
         }
