@@ -131,34 +131,30 @@ export const useTaskStore = defineStore('task', () => {
 		})
 	}
 
-	async function loadTasks(
-		params: TaskFilterParams,
-		projectId: IProject['id'] | null = null,
-	) {
-		if (!params.filter_timezone || params.filter_timezone === '') {
-			params.filter_timezone = authStore.settings.timezone
-		}
-	
-		const cancel = setModuleLoading(setIsLoading)
-		try {
-			const model: any = {}
-	
-			
-			if (typeof projectId === 'number' && projectId > 0) {
-				model.projectId = projectId
-				const service = new TaskCollectionService()
-				tasks.value = await service.getAll(model, params)
-			} else {
-				const service = new TaskCollectionService()
-				tasks.value = await service.getAll({}, params)
-			}
-	
-			baseStore.setHasTasks(tasks.value.length > 0)
-			return tasks.value
-		} finally {
-			cancel()
-		}
-	}
+async function loadTasks(
+    params: TaskFilterParams, 
+    projectId: IProject['id'] | null = null,
+) {
+    if (!params.filter_timezone || params.filter_timezone === '') {
+        params.filter_timezone = authStore.settings.timezone
+    }
+
+    const cancel = setModuleLoading(setIsLoading)
+    try {
+        const taskCollectionService = new TaskCollectionService()
+        
+        if (projectId !== null && projectId > 0) {
+            tasks.value = await taskCollectionService.getAll({projectId}, params)
+        } else {
+            tasks.value = await taskCollectionService.getAll({}, params)
+        }
+        
+        baseStore.setHasTasks(tasks.value.length > 0)
+        return tasks.value
+    } finally {
+        cancel()
+    }
+}
 
 	async function update(task: ITask) {
 		const cancel = setModuleLoading(setIsLoading)
